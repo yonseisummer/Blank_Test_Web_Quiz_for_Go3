@@ -25,10 +25,104 @@ def ensure_nltk_data():
 ensure_nltk_data()
 
 # =========================================================
-# 기본 설정
+# 페이지 설정
 # =========================================================
 st.set_page_config(page_title="수능형 Cloze Test Generator", layout="wide")
 
+# =========================================================
+# CSS: 최종 추천 UI
+# 왼쪽 문제지 sticky 고정 + 오른쪽 카드형 오지선다
+# =========================================================
+st.markdown(
+    """
+    <style>
+    .block-container {
+        padding-top: 1.6rem;
+        padding-bottom: 2rem;
+        max-width: 1500px;
+    }
+
+    .quiz-title {
+        font-size: 2.0rem;
+        font-weight: 800;
+        margin-bottom: 0.2rem;
+    }
+
+    .quiz-caption {
+        color: #666;
+        font-size: 0.95rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .sticky-question-box {
+        position: sticky;
+        top: 0.8rem;
+        height: calc(100vh - 2rem);
+        overflow-y: auto;
+        border: 1px solid #dedede;
+        border-radius: 16px;
+        padding: 22px 24px;
+        background: #ffffff;
+        line-height: 1.95;
+        font-size: 17px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+        white-space: normal;
+    }
+
+    .question-meta {
+        font-size: 0.9rem;
+        color: #666;
+        padding-bottom: 10px;
+        margin-bottom: 12px;
+        border-bottom: 1px solid #eeeeee;
+    }
+
+    .answer-card {
+        border: 1px solid #e2e2e2;
+        border-radius: 16px;
+        padding: 18px 20px 12px 20px;
+        background: #ffffff;
+        margin-bottom: 18px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.045);
+    }
+
+    .answer-card-title {
+        font-size: 1.08rem;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+
+    .stRadio > label {
+        display: none;
+    }
+
+    div[role="radiogroup"] label {
+        padding: 4px 0px;
+    }
+
+    .score-box {
+        border: 1px solid #ddd;
+        border-radius: 16px;
+        padding: 18px 20px;
+        background: #fafafa;
+        margin-top: 10px;
+    }
+
+    @media (max-width: 900px) {
+        .sticky-question-box {
+            position: relative;
+            height: 460px;
+            top: 0;
+        }
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# =========================================================
+# 품사/단어은행
+# =========================================================
 POS_GROUPS = {
     "동사": {"VB", "VBD", "VBG", "VBN", "VBP", "VBZ"},
     "명사": {"NN", "NNS", "NNP", "NNPS"},
@@ -36,7 +130,6 @@ POS_GROUPS = {
     "부사": {"RB", "RBR", "RBS"},
 }
 
-# 너무 쉬운 기능어는 빈칸 대상에서 제외
 STOPWORDS = {
     "the", "a", "an", "of", "to", "for", "in", "on", "at", "by", "with", "from",
     "is", "am", "are", "was", "were", "be", "been", "being",
@@ -49,10 +142,6 @@ STOPWORDS = {
     "will", "would", "may", "might", "must", "should", "have", "has", "had",
 }
 
-# =========================================================
-# 수능특강 어휘 기반 단어은행
-# 기존 코드에 들어 있던 대형 품사별 단어은행을 반영
-# =========================================================
 WORD_BANK_BY_POS = {'동사': ['enrich',
         'incorporate',
         'mention',
@@ -562,7 +651,6 @@ WORD_BANK_BY_POS = {'동사': ['enrich',
         'blankly',
         'cautiously']}
 
-# 전체 단어은행
 WORD_BANK = []
 for word_list in WORD_BANK_BY_POS.values():
     WORD_BANK.extend(word_list)
@@ -589,10 +677,6 @@ def get_pos_group(tag):
     return None
 
 
-def clean_token(token):
-    return str(token).strip()
-
-
 def is_candidate_word(word):
     if not re.fullmatch(r"[A-Za-z]+", word):
         return False
@@ -615,8 +699,12 @@ def assemble_tokens(tokens):
     return text
 
 
+def clean_word(word):
+    return str(word).strip()
+
+
 def make_options(correct_word, pos_group):
-    correct_word = clean_token(correct_word)
+    correct_word = clean_word(correct_word)
     correct_lower = correct_word.lower()
 
     pool_source = WORD_BANK_BY_POS.get(pos_group, WORD_BANK)
@@ -625,10 +713,10 @@ def make_options(correct_word, pos_group):
     seen = set()
 
     for word in pool_source:
-        word = clean_token(word)
+        word = clean_word(word)
         word_lower = word.lower()
 
-        # 구동사/숙어는 radio 보기로 길어질 수 있어서 일단 단일어 위주로 사용
+        # 카드형 보기에서 너무 길어지는 숙어/구동사는 제외
         if " " in word or "~" in word or "∼" in word:
             continue
 
@@ -641,10 +729,9 @@ def make_options(correct_word, pos_group):
         seen.add(word_lower)
         pool.append(word)
 
-    # 혹시 품사별 풀이 부족하면 전체 단어은행에서 보충
     if len(pool) < 4:
         for word in WORD_BANK:
-            word = clean_token(word)
+            word = clean_word(word)
             word_lower = word.lower()
 
             if " " in word or "~" in word or "∼" in word:
@@ -665,7 +752,6 @@ def make_options(correct_word, pos_group):
     wrong_options = random.sample(pool, 4)
     options = wrong_options + [correct_word]
     random.shuffle(options)
-
     return options
 
 
@@ -685,7 +771,6 @@ def generate_quiz(text, pos_choice, blank_ratio):
 
         group = get_pos_group(tag)
 
-        # 같은 품사 선지를 만들기 위해 품사 분류가 안 되는 단어는 제외
         if group is None:
             continue
 
@@ -704,7 +789,6 @@ def generate_quiz(text, pos_choice, blank_ratio):
     answer_map = {}
     option_map = {}
     blank_no = 1
-
     output_tokens = []
 
     for idx, token in enumerate(tokens):
@@ -718,57 +802,41 @@ def generate_quiz(text, pos_choice, blank_ratio):
             output_tokens.append(token)
 
     question_text = assemble_tokens(output_tokens)
-
     return question_text, answer_map, option_map
 
 
 def get_selected_word(selected_text):
-    # "① acquire"에서 acquire만 추출
     if not selected_text:
         return ""
-
     return re.sub(r"^[①②③④⑤]\s*", "", selected_text).strip()
 
 
-def reset_answers():
+def clear_user_answers():
     for key in list(st.session_state.keys()):
         if str(key).startswith("user_answer_"):
             del st.session_state[key]
 
 
 # =========================================================
-# UI
+# 상단 UI
 # =========================================================
-st.title("📘 수능형 Cloze Test Generator")
-
-st.caption("Word(.docx) 파일을 업로드하면 왼쪽에는 문제지, 오른쪽에는 수능특강 어휘 기반 오지선다 보기가 표시됩니다.")
+st.markdown('<div class="quiz-title">📘 수능형 Cloze Test Generator</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="quiz-caption">왼쪽 문제지는 화면에 고정되고, 오른쪽 오지선다만 내려가며 풀 수 있습니다.</div>',
+    unsafe_allow_html=True
+)
 
 top1, top2 = st.columns(2)
-
 with top1:
     class_name = st.text_input("반", value="", placeholder="예: 중3A반")
-
 with top2:
     student_name = st.text_input("이름", value="", placeholder="예: 홍길동")
 
-st.markdown("---")
-
 control1, control2 = st.columns(2)
-
 with control1:
-    pos_choice = st.selectbox(
-        "빈칸으로 만들 품사 선택",
-        ["전체", "동사", "명사", "형용사", "부사"]
-    )
-
+    pos_choice = st.selectbox("빈칸으로 만들 품사 선택", ["전체", "동사", "명사", "형용사", "부사"])
 with control2:
-    blank_pct = st.slider(
-        "빈칸 비율 (%)",
-        min_value=5,
-        max_value=80,
-        value=20,
-        step=5
-    )
+    blank_pct = st.slider("빈칸 비율 (%)", min_value=5, max_value=80, value=20, step=5)
 
 uploaded_file = st.file_uploader(
     "📂 Word(.docx) 파일을 드래그 앤 드롭하거나 클릭하여 업로드하세요.",
@@ -776,10 +844,8 @@ uploaded_file = st.file_uploader(
 )
 
 btn1, btn2 = st.columns(2)
-
 with btn1:
     make_button = st.button("📄 문제 만들기", use_container_width=True)
-
 with btn2:
     reset_button = st.button("🧹 초기화", use_container_width=True)
 
@@ -792,7 +858,6 @@ if uploaded_file is None:
 
 if uploaded_file is not None and make_button:
     uploaded_file.seek(0)
-
     try:
         original_text = read_docx(uploaded_file)
 
@@ -808,8 +873,7 @@ if uploaded_file is not None and make_button:
         st.session_state["class_name"] = class_name
         st.session_state["student_name"] = student_name
 
-        reset_answers()
-
+        clear_user_answers()
         st.rerun()
 
     except Exception as e:
@@ -818,7 +882,10 @@ if uploaded_file is not None and make_button:
 
 st.markdown("---")
 
-left_col, right_col = st.columns([1.25, 1])
+# =========================================================
+# 본문 UI: 왼쪽 sticky 문제지 / 오른쪽 카드형 오지선다
+# =========================================================
+left_col, right_col = st.columns([1.15, 1])
 
 with left_col:
     st.subheader("📝 문제지")
@@ -832,24 +899,16 @@ with left_col:
         if st.session_state.get("student_name"):
             meta.append(f"이름: {st.session_state['student_name']}")
 
+        meta_html = ""
         if meta:
-            st.markdown(" / ".join(meta))
+            meta_html = f'<div class="question-meta">{" / ".join(meta)}</div>'
 
         safe_text = html.escape(st.session_state["question_text"]).replace("\n", "<br>")
 
         st.markdown(
             f"""
-            <div style="
-                border:1px solid #ddd;
-                border-radius:12px;
-                padding:20px;
-                background-color:#ffffff;
-                line-height:1.9;
-                font-size:17px;
-                max-height:720px;
-                overflow-y:auto;
-                white-space:normal;
-            ">
+            <div class="sticky-question-box">
+                {meta_html}
                 {safe_text}
             </div>
             """,
@@ -874,12 +933,19 @@ with right_col:
             for num in sorted(answer_map.keys()):
                 options = option_map.get(num, [])
 
-                st.markdown(f"### {num}번")
-
                 display_options = [
                     f"{labels[i]} {option}"
                     for i, option in enumerate(options)
                 ]
+
+                st.markdown(
+                    f"""
+                    <div class="answer-card">
+                        <div class="answer-card-title">{num}번</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
                 st.radio(
                     label=f"{num}번 보기",
@@ -888,28 +954,42 @@ with right_col:
                     label_visibility="collapsed"
                 )
 
+                st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+
             st.markdown("---")
 
             if st.button("✅ 채점하기", use_container_width=True):
                 correct_count = 0
                 total = len(answer_map)
-
-                st.subheader("📊 채점 결과")
+                results = []
 
                 for num in sorted(answer_map.keys()):
                     selected_text = st.session_state.get(f"user_answer_{num}", "")
                     selected_word = get_selected_word(selected_text)
                     correct_word = answer_map[num]
 
-                    if selected_word.strip().lower() == correct_word.strip().lower():
+                    is_correct = selected_word.strip().lower() == correct_word.strip().lower()
+
+                    if is_correct:
                         correct_count += 1
-                        st.success(f"{num}번 정답")
-                    else:
-                        st.error(
-                            f"{num}번 오답 / 선택: {selected_word} / 정답: {correct_word}"
-                        )
+
+                    results.append((num, selected_word, correct_word, is_correct))
 
                 score_pct = (correct_count / total) * 100 if total else 0
-                st.markdown("---")
-                st.write(f"총 {total}문항 중 **{correct_count}개** 정답입니다.")
-                st.write(f"점수: **{score_pct:.1f}점 / 100점**")
+
+                st.markdown(
+                    f"""
+                    <div class="score-box">
+                        <h3>📊 채점 결과</h3>
+                        <p>총 {total}문항 중 <b>{correct_count}개</b> 정답입니다.</p>
+                        <p>점수: <b>{score_pct:.1f}점 / 100점</b></p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                for num, selected_word, correct_word, is_correct in results:
+                    if is_correct:
+                        st.success(f"{num}번 정답")
+                    else:
+                        st.error(f"{num}번 오답 / 선택: {selected_word} / 정답: {correct_word}")
