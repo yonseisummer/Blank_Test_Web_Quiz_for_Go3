@@ -36,7 +36,6 @@ POS_GROUPS = {
 TOKEN_CANDIDATE_RE = re.compile(r"[A-Za-z0-9\uac00-\ud7a3]+")
 
 # ---------- 수능특강 빈출 어휘 기반 보기 단어은행 ----------
-# 첨부해주신 수능특강 어휘 리스트를 참고해 코드 안에 넣은 보기 후보입니다.
 WORD_BANK = [
     "diversity", "enrich", "unique", "unity", "revision", "manuscript",
     "cooperation", "thoroughly", "insightful", "critical", "incorporate",
@@ -150,12 +149,12 @@ def is_candidate_token(tok):
 
 
 def tokenize_preserve_spacing(text):
-    tokens = word_tokenize(text)
-    return tokens
+    return word_tokenize(text)
 
 
 def assemble_tokens(tokens):
     out = ""
+
     for i, t in enumerate(tokens):
         if i == 0:
             out += t
@@ -169,19 +168,79 @@ def assemble_tokens(tokens):
     return out
 
 
-def make_options(correct_word):
+def get_pos_group(tag):
+    for group_name, tag_set in POS_GROUPS.items():
+        if tag in tag_set:
+            return group_name
+    return None
+
+
+@st.cache_data
+def build_word_bank_by_pos():
+    word_bank_by_pos = {
+        "동사": [],
+        "명사": [],
+        "형용사": [],
+        "부사": []
+    }
+
+    unique_words = []
+    seen = set()
+
+    for word in WORD_BANK:
+        w = str(word).strip()
+        if not w:
+            continue
+
+        lower = w.lower()
+        if lower not in seen:
+            seen.add(lower)
+            unique_words.append(w)
+
+    try:
+        tagged_words = pos_tag(unique_words)
+    except Exception:
+        tagged_words = [(w, "NN") for w in unique_words]
+
+    for word, tag in tagged_words:
+        group = get_pos_group(tag)
+        if group in word_bank_by_pos:
+            word_bank_by_pos[group].append(word)
+
+    return word_bank_by_pos
+
+
+def make_options(correct_word, correct_pos_group):
     correct_word = str(correct_word).strip()
     correct_lower = correct_word.lower()
 
+    word_bank_by_pos = build_word_bank_by_pos()
+
+    if correct_pos_group in word_bank_by_pos:
+        pool_source = word_bank_by_pos[correct_pos_group]
+    else:
+        pool_source = WORD_BANK
+
     pool = []
-    for word in WORD_BANK:
-        if word.lower() != correct_lower and word not in pool:
+
+    for word in pool_source:
+        word_lower = str(word).strip().lower()
+
+        if word_lower != correct_lower and word not in pool:
             pool.append(word)
 
-    if len(pool) >= 4:
-        wrong_options = random.sample(pool, 4)
-    else:
-        wrong_options = pool
+    # 같은 품사 후보가 4개 미만이면 전체 단어장에서 보충
+    if len(pool) < 4:
+        for word in WORD_BANK:
+            word_lower = str(word).strip().lower()
+
+            if word_lower != correct_lower and word not in pool:
+                pool.append(word)
+
+            if len(pool) >= 4:
+                break
+
+    wrong_options = random.sample(pool, 4)
 
     options = wrong_options + [correct_word]
     random.shuffle(options)
@@ -240,11 +299,14 @@ def generate_questions_from_docx(file_like, pos_choice, blank_ratio_fraction):
 
         for idx in sorted(chosen):
             original_word = tokens[idx]
+            original_tag = tagged[idx][1]
+            original_pos_group = get_pos_group(original_tag)
+
             underline = "_" * max(3, len(original_word))
 
             out_tokens[idx] = f"({next_blank_num}){underline}"
             answer_map[next_blank_num] = original_word
-            option_map[next_blank_num] = make_options(original_word)
+            option_map[next_blank_num] = make_options(original_word, original_pos_group)
 
             next_blank_num += 1
 
