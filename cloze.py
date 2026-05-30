@@ -366,9 +366,6 @@ if reset_button:
         del st.session_state[key]
     st.rerun()
 
-if uploaded_file is None:
-    st.info("먼저 Word(.docx) 파일을 업로드하세요.")
-
 if uploaded_file is not None and make_button:
     uploaded_file.seek(0)
 
@@ -386,10 +383,11 @@ if uploaded_file is not None and make_button:
         if str(key).startswith("answer_"):
             del st.session_state[key]
 
-    st.success(f"문제가 생성되었습니다. 총 {len(answer_map)}개의 빈칸이 만들어졌습니다.")
+    st.success(
+        f"문제가 생성되었습니다. 총 {len(answer_map)}개의 빈칸이 만들어졌습니다."
+    )
 
-st.markdown("---")
-
+    st.rerun()
 # ---------------- 좌측 문제지 / 우측 오지선다 ----------------
 left_col, right_col = st.columns([1.25, 1])
 
