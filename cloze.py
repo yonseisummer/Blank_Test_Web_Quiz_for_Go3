@@ -427,29 +427,32 @@ with st.sidebar:
         st.caption("문제지가 여기에 표시됩니다. 먼저 docx를 업로드하고 '문제 만들기'를 눌러 주세요.")
 
 # --------- 메인 영역: 답안 선택 + 채점 ---------
-if "answer_map" in st.session_state and "option_map" in st.session_state:
+# --------- 메인 영역: 답안 선택 + 채점 ---------
+st.subheader("✏️ 답안 선택")
+
+if "answer_map" not in st.session_state or "option_map" not in st.session_state:
+    st.info("문제를 먼저 생성하면 여기에 답안 선택지가 표시됩니다.")
+
+else:
     answer_map = st.session_state["answer_map"]
     option_map = st.session_state["option_map"]
 
+    st.write(f"생성된 빈칸 수: **{len(answer_map)}개**")
+
     if len(answer_map) == 0:
-        st.warning("생성된 빈칸이 없습니다. 빈칸 비율을 올리거나 다른 품사/지문을 사용해 보세요.")
+        st.warning("생성된 빈칸이 없습니다. 빈칸 비율을 올리거나 다른 품사를 선택해 보세요.")
 
     else:
-        st.subheader("✏️ 답안 선택")
-
         for num in sorted(answer_map.keys()):
             options = option_map.get(num, [])
 
-            if len(options) == 0:
-                st.warning(f"{num}번 보기 생성에 문제가 있습니다.")
-            else:
-                st.radio(
-                    label=f"{num}번",
-                    options=["선택하세요"] + options,
-                    key=f"answer_{num}",
-                    index=0,
-                    horizontal=True,
-                )
+            st.markdown(f"### {num}번")
+
+            st.selectbox(
+                label=f"{num}번 답을 선택하세요",
+                options=["선택하세요"] + options,
+                key=f"answer_{num}",
+            )
 
         if st.button("✅ 채점하기"):
             correct_count, total, results = grade_answers(answer_map)
@@ -472,9 +475,4 @@ if "answer_map" in st.session_state and "option_map" in st.session_state:
                     if str(user_ans).strip() == "":
                         st.error(f"{num}번: 무응답. 정답은 **{correct}** 입니다.")
                     else:
-                        st.error(
-                            f"{num}번: 오답. 선택: `{user_ans}`, 정답: **{correct}**"
-                        )
-
-else:
-    st.info("문제지를 먼저 생성해 주세요.")
+                        st.error(f"{num}번: 오답. 선택: `{user_ans}`, 정답: **{correct}**")
