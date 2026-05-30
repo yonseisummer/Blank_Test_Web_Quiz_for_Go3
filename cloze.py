@@ -17,13 +17,9 @@ except LookupError:
     nltk.download("punkt_tab", quiet=True)
 
 try:
-    nltk.data.find("taggers/averaged_perceptron_tagger")
+    nltk.data.find("taggers/averaged_perceptron_tagger_eng")
 except LookupError:
-    try:
-        nltk.data.find("taggers/averaged_perceptron_tagger_eng")
-    except LookupError:
-        nltk.download("averaged_perceptron_tagger", quiet=True)
-        nltk.download("averaged_perceptron_tagger_eng", quiet=True)
+    nltk.download("averaged_perceptron_tagger_eng", quiet=True)
 
 # ---------- POS 그룹 ----------
 POS_GROUPS = {
@@ -33,119 +29,134 @@ POS_GROUPS = {
     "부사": {"RB", "RBR", "RBS"},
 }
 
-TOKEN_CANDIDATE_RE = re.compile(r"[A-Za-z0-9\uac00-\ud7a3]+")
+TOKEN_CANDIDATE_RE = re.compile(r"[A-Za-z]+")
 
-# ---------- 수능특강 빈출 어휘 기반 보기 단어은행 ----------
-WORD_BANK = [
-    "diversity", "enrich", "unique", "unity", "revision", "manuscript",
-    "cooperation", "thoroughly", "insightful", "critical", "incorporate",
-    "mention", "briefly", "complaint", "anniversary", "lifeless",
-    "spotted", "compensation", "refund", "settle", "enthusiastic",
-    "tiresome", "repayment", "loan", "transportation", "translate",
-    "immigration", "document", "property", "ignore", "rejection",
-    "ridiculous", "superior", "dizzy", "assistance", "precious",
-    "possession", "comfort", "interrupt", "weapon", "whisper",
-    "urgently", "trunk", "prayer", "initially", "commute",
-    "cruel", "irony", "soaked", "scent", "unassuming",
-    "ease", "microclimate", "scale", "legendary", "harsh",
-    "approximately", "flat", "inject", "promotion", "manipulation",
-    "loyalty", "astronaut", "inspire", "cause", "trap",
-    "statement", "blend", "accumulate", "countless", "pitiless",
-    "phenomenon", "blueprint", "dictator", "blessing", "deadly",
-    "vehicle", "critically", "controversial", "assumption", "challenge",
-    "gravity", "sequence", "crop", "solar", "filter",
-    "concentrate", "constant", "civilization", "flourish", "sophisticated",
-    "capture", "fraction", "fuel", "advancement", "engagement",
-    "journalist", "relevant", "abandon", "accountable", "democratization",
-    "disruption", "corporate", "shareholder", "shift", "broadcaster",
-    "gatekeeper", "myth", "valid", "commitment", "accomplishment",
-    "intuition", "testing", "confirm", "disprove", "reject",
-    "alter", "hypothesis", "justification", "instinctively", "absolute",
-    "ultimate", "awkwardness", "normal", "internal", "anxiety",
-    "boost", "icebreaker", "lifeline", "insecure", "empathy",
-    "flip", "compassion", "inherent", "overwhelming", "comprehend",
-    "interfere", "overcome", "oversized", "identify", "break",
-    "manageable", "revisit", "distribution", "portfolio", "nutrition",
-    "herb", "regulatory", "misleading", "reputable", "devote",
-    "facility", "embrace", "servant", "polish", "assume",
-    "sweep", "activate", "acceptable", "athlete", "downshift",
-    "resolve", "alien", "compatible", "distinction", "restrict",
-    "democracy", "convincing", "voice", "abstract", "rubbish",
-    "interpret", "inclined", "materialistic", "fascination", "behaviorism",
-    "metaphor", "anthropology", "founder", "cognitive", "construction",
-    "reflection", "humanistic", "emphasis", "essential", "ingredient",
-    "cognition", "escape", "identification", "comparison", "alternative",
-    "perception", "reverse", "signify", "populate", "imagery",
-    "representation", "interweave", "occupation", "instrument", "figure",
-    "dramatically", "utter", "nonsense", "innate", "draw",
-    "ensure", "beverage", "capacity", "priority", "dismiss",
-    "thirst", "negotiator", "justify", "component", "symposium",
-    "bold", "freehand", "transition", "entail", "precision",
-    "reflective", "phenomenon", "disincentive", "interconnectedness",
-    "emphasize", "experimentation", "proportion", "housing", "accommodation",
-    "destination", "opposite", "outlook", "income", "adoption",
-    "outnumber", "foresee", "share", "engage", "occasionally",
-    "commonly", "respondent", "generate", "appliance", "equipment",
-    "exceed", "chemistry", "distinguished", "conduct", "substance",
-    "mixture", "blossom", "vibrant", "affordable", "inner",
-    "persuade", "construct", "textile", "outstanding", "portrait",
-    "geology", "mentor", "interpretation", "pursue", "charge",
-    "supervise", "registration", "complete", "seasonal", "session",
-    "select", "primarily", "accompany", "upcoming", "donate",
-    "gear", "organize", "application", "urban", "assign",
-    "locate", "conclusion", "boundary", "distinct", "civilized",
-    "overlook", "incidence", "obesity", "coincidence", "confront",
-    "distortion", "consistently", "unintentionally", "positive", "ultimately",
-    "moral", "outrage", "witness", "embody", "irrationality",
-    "cooperative", "counterproductive", "objective", "potentially", "disposable",
-    "reassess", "significance", "perspective", "reflect", "analysis",
-    "condense", "address", "regularity", "sharpness", "arrangement",
-    "variation", "odds", "sensation", "faculty", "yield",
-    "coolly", "stir", "subtly", "unconsciously", "posture",
-    "vocal", "perceive", "criticism", "overextension", "involve",
-    "caution", "GPS", "comprehension", "knowledge", "enable",
-    "outscore", "instructor", "foster", "cue", "effortful",
-    "injury", "conversely", "mindset", "evidently", "enhance",
-    "fundamental", "device", "digit", "calculator", "visualize",
-    "obtain", "curriculum", "stress", "abstraction", "specific",
-    "cluster", "define", "calculation", "indicator", "numerical",
-    "seed", "crucial", "trigger", "leading", "investigate",
-    "roughly", "academia", "administrator", "finalize", "combination",
-    "intersect", "inhabitable", "patch", "understandably", "colonial",
-    "territory", "evaluate", "contribution", "normative", "imitate",
-    "associative", "self-esteem", "negative", "performance", "proximity",
-    "element", "pitch", "essentially", "simultaneously", "spatial",
-    "undervalue", "wetland", "provision", "diverse", "apparent",
-    "indicate", "shallow", "concentration", "capability", "demanding",
-    "logical", "output", "subjective", "acquire", "instrumental",
-    "derive", "encounter", "viewpoint", "confusion", "episode",
-    "tragedy", "grasp", "symptom", "mechanism", "psychological",
-    "resource", "fatigue", "attention", "precede", "consequently",
-    "determine", "inactivity", "endure", "despair", "overlap",
-    "remarkably", "estimate", "barn", "tractor", "affectionate",
-    "tap", "nostalgically", "remark", "fondness", "immediate",
-    "verified", "multiple", "straightforward", "necessitate", "supplementary",
-    "favor", "prominent", "coordinate", "indication", "outcome",
-    "rational", "invisible", "unthought", "bygone", "unquestioned",
-    "narrative", "portray", "repurpose", "fashion", "fabric",
-    "modify", "secondhand", "sustainability", "silhouette", "trimmings",
-    "refresh", "economical", "retain", "distribute", "reliability",
-    "questionable", "transmit", "portable", "compact", "accessible",
-    "decline", "shrink", "stable", "chronic", "simplify",
-    "dominant", "opponent", "willingness", "demonstration", "aggressiveness",
-    "preventive", "disarmament", "spiral", "presume", "intention",
-    "hostility", "invasion", "centerpiece", "restrain", "inform",
-    "care", "shelter", "confidence", "gently", "politely",
-    "vendor", "merely", "reply", "patience", "disruptive",
-    "amuse", "instruction", "paragraph", "notice", "newfound",
-    "impression", "nervous", "struggle", "stare", "blankly",
-    "retired", "brighten", "cautiously", "hesitate", "encourage",
-    "encounter", "application", "nonprofit", "renewed", "purpose"
-]
+# ---------- 품사별 수능특강 보기 단어은행 ----------
+WORD_BANK_BY_POS = {
+    "동사": [
+        "enrich", "incorporate", "mention", "settle", "translate",
+        "ignore", "interrupt", "whisper", "commute", "inject",
+        "inspire", "cause", "trap", "blend", "accumulate",
+        "challenge", "concentrate", "flourish", "capture", "abandon",
+        "shift", "confirm", "disprove", "reject", "alter",
+        "boost", "flip", "comprehend", "interfere", "overcome",
+        "identify", "break", "revisit", "devote", "embrace",
+        "polish", "assume", "sweep", "activate", "resolve",
+        "restrict", "interpret", "escape", "reverse", "signify",
+        "populate", "interweave", "draw", "ensure", "dismiss",
+        "justify", "entail", "emphasize", "outnumber", "foresee",
+        "share", "engage", "respond", "generate", "exceed",
+        "conduct", "blossom", "persuade", "construct", "pursue",
+        "charge", "supervise", "complete", "select", "accompany",
+        "donate", "organize", "assign", "locate", "overlook",
+        "confront", "witness", "embody", "reassess", "reflect",
+        "condense", "address", "yield", "stir", "perceive",
+        "involve", "enable", "outscore", "foster", "enhance",
+        "visualize", "obtain", "define", "trigger", "investigate",
+        "intersect", "evaluate", "imitate", "indicate", "acquire",
+        "derive", "encounter", "grasp", "determine", "endure",
+        "overlap", "estimate", "tap", "remark", "necessitate",
+        "supplement", "favor", "coordinate", "portray", "repurpose",
+        "modify", "refresh", "retain", "distribute", "transmit",
+        "decline", "shrink", "simplify", "prevent", "presume",
+        "restrain", "inform", "care", "shelter", "reply",
+        "amuse", "notice", "struggle", "stare", "brighten",
+        "hesitate", "encourage"
+    ],
+    "명사": [
+        "diversity", "unity", "revision", "manuscript", "cooperation",
+        "complaint", "anniversary", "compensation", "refund", "repayment",
+        "loan", "transportation", "immigration", "document", "property",
+        "rejection", "assistance", "possession", "comfort", "weapon",
+        "trunk", "prayer", "irony", "scent", "ease",
+        "microclimate", "scale", "promotion", "manipulation", "loyalty",
+        "astronaut", "statement", "phenomenon", "blueprint", "dictator",
+        "blessing", "vehicle", "assumption", "gravity", "sequence",
+        "crop", "filter", "civilization", "fraction", "fuel",
+        "advancement", "engagement", "journalist", "democratization", "disruption",
+        "shareholder", "broadcaster", "gatekeeper", "myth", "commitment",
+        "accomplishment", "intuition", "testing", "hypothesis", "justification",
+        "awkwardness", "anxiety", "icebreaker", "lifeline", "empathy",
+        "compassion", "distribution", "portfolio", "nutrition", "herb",
+        "facility", "servant", "athlete", "distinction", "democracy",
+        "voice", "abstract", "rubbish", "fascination", "behaviorism",
+        "metaphor", "anthropology", "founder", "construction", "reflection",
+        "emphasis", "ingredient", "cognition", "identification", "comparison",
+        "alternative", "perception", "imagery", "representation", "occupation",
+        "instrument", "figure", "nonsense", "beverage", "capacity",
+        "priority", "thirst", "negotiator", "component", "symposium",
+        "transition", "precision", "experimentation", "proportion", "housing",
+        "accommodation", "destination", "outlook", "income", "adoption",
+        "respondent", "appliance", "equipment", "chemistry", "substance",
+        "mixture", "textile", "portrait", "geology", "mentor",
+        "interpretation", "registration", "session", "gear", "application",
+        "conclusion", "boundary", "incidence", "obesity", "coincidence",
+        "distortion", "moral", "outrage", "irrationality", "significance",
+        "perspective", "analysis", "regularity", "sharpness", "arrangement",
+        "variation", "odds", "sensation", "faculty", "posture",
+        "criticism", "overextension", "caution", "comprehension", "knowledge",
+        "instructor", "cue", "injury", "mindset", "device",
+        "digit", "calculator", "curriculum", "stress", "abstraction",
+        "cluster", "calculation", "indicator", "seed", "academia",
+        "administrator", "combination", "patch", "territory", "contribution",
+        "self-esteem", "performance", "proximity", "element", "pitch",
+        "wetland", "provision", "concentration", "capability", "demand",
+        "output", "viewpoint", "confusion", "episode", "tragedy",
+        "symptom", "mechanism", "resource", "fatigue", "attention",
+        "inactivity", "despair", "barn", "tractor", "fondness",
+        "indication", "outcome", "narrative", "fashion", "fabric",
+        "sustainability", "silhouette", "trimmings", "reliability", "opponent",
+        "willingness", "demonstration", "aggressiveness", "disarmament", "spiral",
+        "intention", "hostility", "invasion", "centerpiece", "confidence",
+        "vendor", "patience", "instruction", "paragraph", "impression",
+        "purpose"
+    ],
+    "형용사": [
+        "unique", "insightful", "critical", "brief", "lifeless",
+        "spotted", "enthusiastic", "tiresome", "ridiculous", "superior",
+        "dizzy", "precious", "cruel", "soaked", "unassuming",
+        "legendary", "harsh", "flat", "countless", "pitiless",
+        "deadly", "controversial", "solar", "constant", "sophisticated",
+        "relevant", "accountable", "valid", "absolute", "ultimate",
+        "normal", "internal", "insecure", "inherent", "overwhelming",
+        "oversized", "manageable", "regulatory", "misleading", "reputable",
+        "acceptable", "alien", "compatible", "convincing", "inclined",
+        "materialistic", "cognitive", "humanistic", "essential", "dramatic",
+        "utter", "innate", "bold", "freehand", "reflective",
+        "interconnected", "opposite", "common", "distinguished", "vibrant",
+        "affordable", "inner", "outstanding", "seasonal", "upcoming",
+        "urban", "distinct", "civilized", "consistent", "unintentional",
+        "positive", "cooperative", "counterproductive", "objective", "potential",
+        "disposable", "vocal", "effortful", "evident", "fundamental",
+        "specific", "numerical", "crucial", "leading", "rough",
+        "inhabitable", "colonial", "normative", "associative", "negative",
+        "spatial", "diverse", "apparent", "shallow", "demanding",
+        "logical", "subjective", "instrumental", "psychological", "remarkable",
+        "affectionate", "immediate", "verified", "multiple", "straightforward",
+        "supplementary", "prominent", "rational", "invisible", "bygone",
+        "unquestioned", "secondhand", "economical", "questionable", "portable",
+        "compact", "accessible", "stable", "chronic", "dominant",
+        "preventive", "newfound", "nervous", "retired", "renewed"
+    ],
+    "부사": [
+        "thoroughly", "briefly", "urgently", "initially", "approximately",
+        "critically", "instinctively", "dramatically", "occasionally", "commonly",
+        "consistently", "unintentionally", "ultimately", "potentially", "coolly",
+        "subtly", "unconsciously", "conversely", "evidently", "roughly",
+        "understandably", "essentially", "simultaneously", "consequently", "remarkably",
+        "nostalgically", "gently", "politely", "merely", "blankly",
+        "cautiously"
+    ]
+}
+
+# 전체 단어은행
+WORD_BANK = []
+for words in WORD_BANK_BY_POS.values():
+    WORD_BANK.extend(words)
 
 
 def is_candidate_token(tok):
-    return bool(TOKEN_CANDIDATE_RE.search(tok))
+    return bool(TOKEN_CANDIDATE_RE.fullmatch(tok))
 
 
 def tokenize_preserve_spacing(text):
@@ -175,49 +186,13 @@ def get_pos_group(tag):
     return None
 
 
-@st.cache_data
-def build_word_bank_by_pos():
-    word_bank_by_pos = {
-        "동사": [],
-        "명사": [],
-        "형용사": [],
-        "부사": []
-    }
-
-    unique_words = []
-    seen = set()
-
-    for word in WORD_BANK:
-        w = str(word).strip()
-        if not w:
-            continue
-
-        lower = w.lower()
-        if lower not in seen:
-            seen.add(lower)
-            unique_words.append(w)
-
-    try:
-        tagged_words = pos_tag(unique_words)
-    except Exception:
-        tagged_words = [(w, "NN") for w in unique_words]
-
-    for word, tag in tagged_words:
-        group = get_pos_group(tag)
-        if group in word_bank_by_pos:
-            word_bank_by_pos[group].append(word)
-
-    return word_bank_by_pos
-
-
 def make_options(correct_word, correct_pos_group):
     correct_word = str(correct_word).strip()
     correct_lower = correct_word.lower()
 
-    word_bank_by_pos = build_word_bank_by_pos()
-
-    if correct_pos_group in word_bank_by_pos:
-        pool_source = word_bank_by_pos[correct_pos_group]
+    # 정답과 같은 품사에서 오답 후보를 먼저 뽑음
+    if correct_pos_group in WORD_BANK_BY_POS:
+        pool_source = WORD_BANK_BY_POS[correct_pos_group]
     else:
         pool_source = WORD_BANK
 
@@ -226,22 +201,21 @@ def make_options(correct_word, correct_pos_group):
     for word in pool_source:
         word_lower = str(word).strip().lower()
 
-        if word_lower != correct_lower and word not in pool:
+        if word_lower != correct_lower and word_lower not in [p.lower() for p in pool]:
             pool.append(word)
 
-    # 같은 품사 후보가 4개 미만이면 전체 단어장에서 보충
+    # 혹시 같은 품사 후보가 4개 미만이면 전체 단어장에서 보충
     if len(pool) < 4:
         for word in WORD_BANK:
             word_lower = str(word).strip().lower()
 
-            if word_lower != correct_lower and word not in pool:
+            if word_lower != correct_lower and word_lower not in [p.lower() for p in pool]:
                 pool.append(word)
 
             if len(pool) >= 4:
                 break
 
     wrong_options = random.sample(pool, 4)
-
     options = wrong_options + [correct_word]
     random.shuffle(options)
 
@@ -267,7 +241,7 @@ def generate_questions_from_docx(file_like, pos_choice, blank_ratio_fraction):
         tokens = tokenize_preserve_spacing(orig_text)
 
         try:
-            tagged = pos_tag(tokens)
+            tagged = pos_tag(tokens, lang="eng")
         except Exception:
             tagged = [(t, "NN") for t in tokens]
 
@@ -283,11 +257,12 @@ def generate_questions_from_docx(file_like, pos_choice, blank_ratio_fraction):
 
         if not candidate_indices:
             candidate_indices = [
-                i for i, (tok, tg) in enumerate(tagged) if is_candidate_token(tok)
+                i for i, (tok, tg) in enumerate(tagged)
+                if is_candidate_token(tok)
             ]
 
         n_candidates = len(candidate_indices)
-        n_blanks = max(0, int(round(n_candidates * blank_ratio_fraction)))
+        n_blanks = max(1, int(round(n_candidates * blank_ratio_fraction))) if n_candidates > 0 else 0
         n_blanks = min(n_blanks, n_candidates)
 
         chosen = []
@@ -330,6 +305,9 @@ def grade_answers(answer_map):
         correct = answer_map[num]
         user_key = f"answer_{num}"
         user_ans = st.session_state.get(user_key, "")
+
+        if user_ans == "선택하세요":
+            user_ans = ""
 
         user_norm = str(user_ans).strip().lower()
         correct_norm = str(correct).strip().lower()
@@ -420,7 +398,10 @@ if uploaded_file is not None:
                 if str(key).startswith("answer_"):
                     del st.session_state[key]
 
-            st.success("문제가 생성되었습니다. 왼쪽 문제지를 보면서 아래에서 답을 선택하세요!")
+            if len(answer_map) == 0:
+                st.warning("빈칸이 생성되지 않았습니다. 다른 품사나 지문을 선택해 보세요.")
+            else:
+                st.success(f"문제가 생성되었습니다. 총 {len(answer_map)}개의 빈칸이 만들어졌습니다.")
 
         except Exception as e:
             st.error("문제 생성 중 오류가 발생했습니다.")
@@ -459,13 +440,16 @@ if "answer_map" in st.session_state and "option_map" in st.session_state:
         for num in sorted(answer_map.keys()):
             options = option_map.get(num, [])
 
-            st.radio(
-                label=f"{num}번",
-                options=options,
-                key=f"answer_{num}",
-                index=None,
-                horizontal=True,
-            )
+            if len(options) == 0:
+                st.warning(f"{num}번 보기 생성에 문제가 있습니다.")
+            else:
+                st.radio(
+                    label=f"{num}번",
+                    options=["선택하세요"] + options,
+                    key=f"answer_{num}",
+                    index=0,
+                    horizontal=True,
+                )
 
         if st.button("✅ 채점하기"):
             correct_count, total, results = grade_answers(answer_map)
